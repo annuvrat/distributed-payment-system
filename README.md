@@ -204,15 +204,15 @@ npx prisma generate
 ```bash
 npx tsx index.ts
 ```
-![alt text](server.png)
 **6. Start the worker** (in a separate terminal)
+![api server](server.png)
 
 ```bash
 npx tsx worker.ts
 ```
-![alt text](worker.png)
 
 ---
+![worker server](worker.png)
 
 ## Environment Variables
 
