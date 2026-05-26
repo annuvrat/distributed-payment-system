@@ -5,6 +5,10 @@ import {
   simulateExternalGateway,
   type GatewayResponse,
 } from '../helpers/gateway.ts';
+import {
+  withCircuitBreaker,
+  isCircuitOpen,
+} from '../helpers/circuitBreaker.ts';
 
 import {
   PaymentStatus,
@@ -116,11 +120,56 @@ export class PaymentService {
       ]);
 
       // =========================================
-      // 5. Call Gateway
+      // 5. Call Gateway (protected by circuit breaker)
       // =========================================
 
-      const response: GatewayResponse =
-        await simulateExternalGateway(Number(payment.amount));
+      const cbName = 'external_gateway';
+
+      if (await isCircuitOpen(cbName)) {
+        // circuit open: schedule a retry without hammering the gateway
+        await prisma.$transaction([
+          prisma.payment.update({
+            where: { id: paymentId },
+
+            data: {
+              status: PaymentStatus.RETRY_SCHEDULED,
+
+              lockedAt: null,
+              workerId: null,
+
+              nextRetryAt: new Date(Date.now() + 10000),
+
+              lastFailureReason: 'CIRCUIT_OPEN',
+            },
+          }),
+
+          prisma.paymentAuditLog.create({
+            data: {
+              paymentId,
+
+              fromStatus: PaymentStatus.PROCESSING,
+              toStatus: PaymentStatus.RETRY_SCHEDULED,
+
+              eventType: PaymentEventType.RETRY_SCHEDULED,
+
+              attemptNumber,
+
+              rawPayload: { reason: 'CIRCUIT_OPEN' } as any,
+
+              message: `Circuit open: deferring gateway call.`,
+            },
+          }),
+        ]);
+
+        console.warn(`[Worker ${workerId}] Circuit open; retrying later: ${paymentId}`);
+
+        throw new Error('CIRCUIT_OPEN');
+      }
+
+      const response: GatewayResponse = await withCircuitBreaker(
+        cbName,
+        () => simulateExternalGateway(Number(payment.amount))
+      );
 
       // =========================================
       // 6. SUCCESS CASE

@@ -2,19 +2,21 @@ import { Hono } from "hono";
 import { serve } from '@hono/node-server';
 import { logger } from 'hono/logger';
 import { cors } from 'hono/cors';
+import { configDotenv } from "dotenv";
+configDotenv();
 
 import { secureHeaders } from 'hono/secure-headers';
 import { errorHandler } from "./src/middlewares/error.middleware.ts";
-import { configDotenv } from "dotenv";
+import { rateLimitMiddleware } from './src/middlewares/rate.middleware.ts';
 import { prisma } from "./src/db/db.ts";
 import paymentRoutes from './src/routes/payment.route.ts';
 import webhookRoutes from './src/routes/webhook.routes.ts';
-configDotenv();
 const app = new Hono();
 
 app.use(logger());
 app.use(cors());
 app.use(secureHeaders());
+app.use(rateLimitMiddleware);
 app.use('*', logger());
 app.use('*', cors({
   origin: (origin) => origin,

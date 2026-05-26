@@ -1,5 +1,7 @@
 import { Redis, type RedisOptions } from 'ioredis';
+import dotenv from 'dotenv';
 
+dotenv.config();
 const redisUrl = process.env.REDIS_URL?.trim();
 const redisHost = process.env.REDIS_HOST?.trim();
 const redisPort = Number(process.env.REDIS_PORT?.trim() ?? '0');
