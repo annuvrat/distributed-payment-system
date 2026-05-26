@@ -287,11 +287,3 @@ Payments require a full, tamper-evident history for compliance, debugging, and d
 
 ---
 
-## Future Improvements
-
-- [ ] Circuit breaker to stop hammering failing gateways
-- [ ] Dead-letter queue for permanently failed jobs
-- [ ] Distributed locks (to prevent duplicate processing across workers)
-- [ ] Bull Board dashboard for queue visibility
-- [ ] OpenTelemetry tracing and metrics
-- [ ] Docker Compose health checks and graceful shutdown
