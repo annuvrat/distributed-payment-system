@@ -1,0 +1,117 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  name      String?
+  payments  Payment[]
+
+  @@map("users")
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  RETRY_SCHEDULED
+  SUCCESS
+  FAILED
+}
+enum PaymentEventType {
+  PAYMENT_CREATED
+  PROCESSING_STARTED
+  GATEWAY_TIMEOUT
+  RETRY_SCHEDULED
+  PAYMENT_SUCCESS
+  PAYMENT_FAILED
+  WEBHOOK_RECEIVED
+  WEBHOOK_DUPLICATE_IGNORED
+  WEBHOOK_SUCCESS
+WEBHOOK_FAILED
+WEBHOOK_CONFLICT_IGNORED
+}
+
+model Payment {
+  id                  String            @id @default(uuid())
+  userId              String            @map("user_id")
+  amount              Decimal           @db.Decimal(10, 2)
+  currency            String            @default("INR")
+  status              PaymentStatus     @default(PENDING)
+  
+  // Idempotency: Ensures repeated requests don't create duplicate entries
+  idempotencyKey      String            @unique @map("idempotency_key")
+  
+  // Retry Logic State Tracking
+  retryCount          Int               @default(0) @map("retry_count")
+  maxAttempts         Int               @default(3) @map("max_attempts")
+  lastFailureReason String? @map("last_failure_reason")
+gatewayReferenceId String? @unique @map("gateway_reference_id")  
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  lockedAt DateTime? @map("locked_at")
+  workerId String? @map("worker_id")
+  requestHash String @map("request_hash")
+  lastAttemptAt DateTime? @map("last_attempt_at")
+nextRetryAt DateTime? @map("next_retry_at")
+
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  auditLogs           PaymentAuditLog[]
+  webhookEvents WebhookEvent[]
+
+  @@index([status])
+  @@map("payments")
+  @@index([lockedAt])
+@@index([status, lockedAt])
+}
+
+// 👑 THE GOLDEN ACCENT: This table gets you selected
+model PaymentAuditLog {
+  id          String        @id @default(uuid())
+  paymentId   String        @map("payment_id")
+  fromStatus  PaymentStatus? @map("from_status")
+  attemptNumber Int? @map("attempt_number")
+  toStatus    PaymentStatus @map("to_status")
+  message     String        // e.g., "Gateway timeout on attempt 2. Retrying..."
+  rawPayload  Json?         @map("raw_payload") // Stores the simulated gateway response snippet
+  createdAt   DateTime      @default(now()) @map("created_at")
+eventType PaymentEventType @map("event_type")
+  payment     Payment       @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@map("payment_audit_logs")
+}
+
+
+model WebhookEvent {
+  id                  String   @id @default(uuid())
+
+  paymentId           String   @map("payment_id")
+
+  gatewayReferenceId  String   @unique @map("gateway_reference_id")
+
+  webhookStatus       String   @map("webhook_status")
+
+  payload             Json
+
+  processedAt         DateTime @default(now()) @map("processed_at")
+
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  payment             Payment @relation(fields: [paymentId],references: [id],onDelete: Cascade)
+
+  @@index([paymentId])
+
+  @@map("webhook_events")
+}
