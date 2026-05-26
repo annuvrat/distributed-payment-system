@@ -1,0 +1,85 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Solulab Payment API",
+    "version": "1.0.0",
+    "description": "API for enqueueing and reconciling payments"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000"
+    }
+  ],
+  "paths": {
+    "/payments": {
+      "post": {
+        "summary": "Create payment and enqueue processing",
+        "tags": ["Payments"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["userId", "amount", "currency"],
+                "properties": {
+                  "userId": { "type": "string" },
+                  "amount": { "type": "number" },
+                  "currency": { "type": "string", "example": "INR" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": { "description": "Payment queued successfully" },
+          "409": { "description": "Idempotency conflict" }
+        }
+      }
+    },
+    "/payments/{id}": {
+      "get": {
+        "summary": "Get payment by ID",
+        "tags": ["Payments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Payment retrieved successfully" },
+          "404": { "description": "Payment not found" }
+        }
+      }
+    },
+    "/webhooks/payment": {
+      "post": {
+        "summary": "Payment gateway webhook",
+        "tags": ["Webhooks"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["paymentId", "gatewayReferenceId", "status"],
+                "properties": {
+                  "paymentId": { "type": "string" },
+                  "gatewayReferenceId": { "type": "string" },
+                  "status": { "type": "string", "enum": ["success", "failure"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Webhook processed successfully" },
+          "400": { "description": "Invalid webhook payload" }
+        }
+      }
+    }
+  }
+}

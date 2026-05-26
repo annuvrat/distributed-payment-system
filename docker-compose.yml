@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  valkey:
+    image: valkey/valkey
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  api:
+    build: .
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
+      - REDIS_HOST=valkey
+      - REDIS_PORT=6379
+      - PAYMENT_QUEUE_NAME=payments
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - valkey
+
+  worker:
+    build: .
+    command: ["npx", "tsx", "worker.ts"]
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
+      - REDIS_HOST=valkey
+      - REDIS_PORT=6379
+      - PAYMENT_QUEUE_NAME=payments
+    depends_on:
+      - postgres
+      - valkey
+
+volumes:
+  db_data:

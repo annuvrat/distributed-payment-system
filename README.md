@@ -56,84 +56,84 @@ Audit Logs + PostgreSQL
 Retryable errors:
 
 - gateway timeouts
-- transient network failures
+# Resilient Payment Processing System
 
-Non-retryable errors:
+Production-inspired backend for payment processing using Hono, Prisma, BullMQ and Valkey (Redis-compatible).
 
-- insufficient funds
-- business validation failures
+Features
+- Asynchronous background processing with durable retries
+- Exponential backoff and idempotent payment creation
+- Webhook reconciliation and immutable audit logs
 
-Retry strategy:
+Local development (Docker)
 
-- exponential backoff
-- BullMQ durable retries
-- retries survive server restarts
+1. Build and start services (API, worker, Postgres, Valkey):
 
----
+```bash
+docker compose up --build
+```
 
-## Idempotency
+2. The API will be available at `http://localhost:3000`.
 
-Duplicate requests with the same:
+Environment
+- See `.env.example` for required variables. When using Docker Compose the `postgres` and `valkey` services are exposed and the compose file sets sensible defaults.
 
-```http
-Idempotency-Key
-eturn the same payment response.
+Common commands
 
-Prevents:
+Install dependencies locally:
 
-duplicate charges
-duplicate payment rows
-accidental client retries
-Concurrency Protection
+```bash
+npm install
+```
 
-The worker uses database locking semantics:
+Run TypeScript typecheck:
 
-lockedAt
-workerId
+```bash
+npx tsc --noEmit
+```
 
-This prevents:
+Run API locally (requires dev deps):
 
-multiple workers processing the same payment
-race conditions
-duplicate gateway execution
-Audit Logging
+```bash
+npx tsx index.ts
+```
 
-Every important payment transition is persisted:
+Run worker locally:
 
-payment created
-processing started
-retry scheduled
-payment success
-payment failure
-webhook reconciliation
-duplicate webhook ignored
+```bash
+npx tsx worker.ts
+```
 
-This creates a complete immutable audit trail.
+Database & migrations
 
-Webhook Reconciliation
+When running with Docker Compose the Postgres service is available at `postgres:5432` and the README's `.env.example` is configured to point to it.
 
-The system supports asynchronous gateway callbacks.
+Apply migrations and generate Prisma client:
 
-Features:
+```bash
+npx prisma migrate dev
+npx prisma generate
+```
 
-duplicate webhook protection
-final-state conflict handling
-state reconciliation
-idempotent webhook processing
-Payment Lifecycle
+API Endpoints
 
-PENDING ↓ PROCESSING ↓ SUCCESS
+- POST `/payments` — create and queue a payment.
+  - Headers: `Idempotency-Key` (recommended)
+  - Body: `{ "userId": "...", "amount": 500, "currency": "INR" }`
+  - Responses: `202` (queued), `409` (idempotency conflict)
 
-OR
+- GET `/payments/{id}` — fetch a payment by id.
 
-PENDING ↓ PROCESSING ↓ RETRY_SCHEDULED ↓ PROCESSING ↓ FAILED
+- POST `/webhooks/payment` — gateway webhook for reconciliation.
 
-Tech Stack
-Layer	Technology
-API Framework	Hono
-Runtime	Node.js
-Language	TypeScript
-Database	PostgreSQL
+Notes
+- If you see `connect ETIMEDOUT`, ensure the `valkey`/Redis service is running and reachable (see Docker Compose).
+- This repo's development runtime uses `tsx` to run TypeScript directly; the Docker image in `docker-compose.yml` installs all dependencies and runs `tsx` so you can develop without a separate build step.
+
+Contributing
+- Open issues or submit PRs for bug fixes and improvements.
+
+License: MIT
 ORM	Prisma
 Queue	BullMQ
 Redis Engine	Valkey
