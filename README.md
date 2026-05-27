@@ -215,20 +215,33 @@ npx tsx worker.ts
 
 ## Testing
 
-This project includes a basic test suite covering core helpers and resilience primitives.
+This project includes a basic test suite covering helpers, middleware, controllers, and service units.
 
-Install dev dependencies and run tests:
+Run the test suite (Vitest):
 
 ```bash
 npm install
 npm test
+# run a single test file
+npm test -- test/services/webhook.service.test.ts
+# or run in watch mode
+npm run test:watch
 ```
 
 Current tests:
 
-- `test/helpers/gateway.test.ts` — exercises the gateway simulator outcomes.
-- `test/helpers/circuitBreaker.test.ts` — unit-tests the circuit breaker behavior using a mocked Redis connection.
+- `test/helpers/gateway.test.ts` — gateway simulator outcomes.
+- `test/helpers/circuitBreaker.test.ts` — circuit breaker unit tests (mocked Redis).
+- `test/middlewares/idempotency.middleware.test.ts` — idempotency middleware behavior.
+- `test/controllers/payment.controller.test.ts` — payment controller create flow (mocks `prisma` and queue).
+- `test/services/webhook.service.test.ts` — webhook reconciliation (mocks `prisma`).
 
+Notes:
+- Tests are unit-focused and mock external dependencies (`prisma`, Redis, queue) for fast, deterministic runs.
+- To add integration tests, consider running against a disposable test Postgres and Valkey/Redis instance (Docker Compose) and using a test Prisma schema.
+
+---
+- 
 
 
 ---
