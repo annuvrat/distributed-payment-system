@@ -212,6 +212,26 @@ npx tsx worker.ts
 ```
 
 ---
+
+## Testing
+
+This project includes a basic test suite covering core helpers and resilience primitives.
+
+Install dev dependencies and run tests:
+
+```bash
+npm install
+npm test
+```
+
+Current tests:
+
+- `test/helpers/gateway.test.ts` — exercises the gateway simulator outcomes.
+- `test/helpers/circuitBreaker.test.ts` — unit-tests the circuit breaker behavior using a mocked Redis connection.
+
+
+
+---
 ![worker server](docs/worker.png)
 
 ## Environment Variables
