@@ -1,7 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
   provider = "prisma-client-js"
@@ -50,7 +47,6 @@ model Payment {
   currency            String            @default("INR")
   status              PaymentStatus     @default(PENDING)
   
-  // Idempotency: Ensures repeated requests don't create duplicate entries
   idempotencyKey      String            @unique @map("idempotency_key")
   
   // Retry Logic State Tracking
@@ -76,7 +72,6 @@ nextRetryAt DateTime? @map("next_retry_at")
 @@index([status, lockedAt])
 }
 
-// 👑 THE GOLDEN ACCENT: This table gets you selected
 model PaymentAuditLog {
   id          String        @id @default(uuid())
   paymentId   String        @map("payment_id")
